@@ -43,6 +43,7 @@ from pandas._libs.tslibs import (
     tz_convert_from_utc,
     tzconversion,
 )
+from pandas._libs.tslibs.nattype import iNaT
 from pandas._libs.tslibs.dtypes import abbrev_to_npy_unit
 from pandas.errors import PerformanceWarning
 from pandas.util._exceptions import find_stack_level
@@ -1095,6 +1096,24 @@ default 'raise'
             else:
                 raise TypeError("Already tz-aware, use tz_convert to convert.")
         else:
+            if self.isna().all():
+                
+                new_dates_int = np.full(self.shape, iNaT, dtype="int64")
+                new_dates_dt64 = new_dates_int.view("M8[ns]")  # Explicitly force nanoseconds
+                
+                dtype = tz_to_dtype(tz, unit="ns")  # Ensure correct dtype
+                
+                #print("DEBUG - dtype:", new_dates_dt64.dtype)
+                #print("DEBUG - values:", new_dates_dt64)
+
+                result = self._simple_new(new_dates_dt64, dtype=dtype, freq=self.freq)
+                
+                #print("DEBUG - result type:", type(result))
+                #print("DEBUG - result array:", result)
+
+                # Ensure timezone is removed before returning to NumPy
+                return result.tz_convert(None)
+
             tz = timezones.maybe_get_tz(tz)
             # Convert to UTC
 
